@@ -1,0 +1,13 @@
+// این یک برنامه تست برای زبان Trust است
+
+fn main() {
+    let x: i32 = 5;
+    let y: i32 = 0x1A;
+    let result: i32 = x + y;
+
+    if result > 10 {
+        println!("Result is greater than 10");
+    } else {
+        println!("Result is 10 or less");
+    }
+}
