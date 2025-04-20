@@ -4,6 +4,7 @@
 #include <vector>
 #include <string>
 #include <map>
+#include <memory>
 
 enum TokenType {
     // Keywords
@@ -47,6 +48,75 @@ struct Token {
     std::string value;
 };
 
+struct ASTNode {
+    std::string name;
+    std::vector<std::shared_ptr<ASTNode>> children;
+};
+
+class SemanticAnalyzer {
+    std::vector<std::string> symbolTable;
+public:
+    void analyze(std::shared_ptr<ASTNode> node) {
+        if (!node) return;
+
+        if (node->name == "let_declaration") {
+            std::string varName = node->children[1]->name;
+            if (isDeclared(varName)) {
+                std::cerr << "خطا: متغیر " << varName << " قبلا تعریف شده است!\n";
+            } else {
+                symbolTable.push_back(varName);
+            }
+        }
+
+        if (node->name == "identifier") {
+            std::string varName = node->children[0]->name;
+            if (!isDeclared(varName)) {
+                std::cerr << "خطا: متغیر " << varName << " تعریف نشده است!\n";
+            }
+        }
+
+        for (auto& child : node->children) {
+            analyze(child);
+        }
+    }
+
+    bool isDeclared(const std::string& name) {
+        return std::find(symbolTable.begin(), symbolTable.end(), name) != symbolTable.end();
+    }
+};
+
+// اضافه کردن تابع getSymbolToken
+TokenType getSymbolToken(const std::string& lexeme) {
+    if (lexeme == "=") return T_Assign;
+    if (lexeme == "+") return T_AOp_Trust;
+    if (lexeme == "-") return T_AOp_MN;
+    if (lexeme == "*") return T_AOp_ML;
+    if (lexeme == "/") return T_AOp_DV;
+    if (lexeme == "%") return T_AOp_RM;
+    if (lexeme == "<") return T_ROp_L;
+    if (lexeme == ">") return T_ROp_G;
+    if (lexeme == "<=") return T_ROp_LE;
+    if (lexeme == ">=") return T_ROp_GE;
+    if (lexeme == "!=") return T_ROp_NE;
+    if (lexeme == "==") return T_ROp_E;
+    if (lexeme == "&&") return T_LOp_AND;
+    if (lexeme == "||") return T_LOp_OR;
+    if (lexeme == "!") return T_LOp_NOT;
+    if (lexeme == "(") return T_LP;
+    if (lexeme == ")") return T_RP;
+    if (lexeme == "{") return T_LC;
+    if (lexeme == "}") return T_RC;
+    if (lexeme == "[") return T_LB;
+    if (lexeme == "]") return T_RB;
+    if (lexeme == ";") return T_Semicolon;
+    if (lexeme == ",") return T_Comma;
+    if (lexeme == ":") return T_Colon;
+    if (lexeme == "->") return T_Arrow;
+    
+    return T_Unknown; // اگر نماد شناخته نشده باشد
+}
+
+// اضافه کردن تابع tokenTypeToString
 std::string tokenTypeToString(TokenType type) {
     switch (type) {
         case T_Bool: return "T_Bool";
@@ -82,14 +152,12 @@ std::string tokenTypeToString(TokenType type) {
         case T_LOp_NOT: return "T_LOp_NOT";
 
         case T_Assign: return "T_Assign";
-
         case T_LP: return "T_LP";
         case T_RP: return "T_RP";
         case T_LC: return "T_LC";
         case T_RC: return "T_RC";
         case T_LB: return "T_LB";
         case T_RB: return "T_RB";
-
         case T_Semicolon: return "T_Semicolon";
         case T_Comma: return "T_Comma";
         case T_Colon: return "T_Colon";
@@ -99,10 +167,12 @@ std::string tokenTypeToString(TokenType type) {
         case T_Decimal: return "T_Decimal";
         case T_Hexadecimal: return "T_Hexadecimal";
         case T_String: return "T_String";
+
         case T_Comment: return "T_Comment";
         case T_Whitespace: return "T_Whitespace";
+        case T_Unknown: return "T_Unknown";
 
-        default: return "T_Unknown";
+        default: return "Unknown";
     }
 }
 
@@ -110,39 +180,10 @@ bool isKeyword(const std::string& word) {
     return keywords.find(word) != keywords.end();
 }
 
-TokenType getSymbolToken(const std::string& lexeme) {
-    if (lexeme == "+") return T_AOp_Trust;
-    if (lexeme == "-") return T_AOp_MN;
-    if (lexeme == "*") return T_AOp_ML;
-    if (lexeme == "/") return T_AOp_DV;
-    if (lexeme == "%") return T_AOp_RM;
-    if (lexeme == "<") return T_ROp_L;
-    if (lexeme == ">") return T_ROp_G;
-    if (lexeme == "<=") return T_ROp_LE;
-    if (lexeme == ">=") return T_ROp_GE;
-    if (lexeme == "!=") return T_ROp_NE;
-    if (lexeme == "==") return T_ROp_E;
-    if (lexeme == "&&") return T_LOp_AND;
-    if (lexeme == "||") return T_LOp_OR;
-    if (lexeme == "!") return T_LOp_NOT;
-    if (lexeme == "=") return T_Assign;
-    if (lexeme == "(") return T_LP;
-    if (lexeme == ")") return T_RP;
-    if (lexeme == "{") return T_LC;
-    if (lexeme == "}") return T_RC;
-    if (lexeme == "[") return T_LB;
-    if (lexeme == "]") return T_RB;
-    if (lexeme == ";") return T_Semicolon;
-    if (lexeme == ",") return T_Comma;
-    if (lexeme == ":") return T_Colon;
-    if (lexeme == "->") return T_Arrow;
-    return T_Unknown;
-}
-
 std::vector<Token> tokenize(const std::string& code) {
     std::vector<Token> tokens;
 
-    std::regex tokenRegex(R"((\/\/[^\n]*\n)|(\"(\\.|[^\"])*\")|0x[0-9a-fA-F]+|[0-9]+|->|!=|==|<=|>=|&&|\|\||[a-zA-Z_][a-zA-Z0-9_]*|[-+*/%=<>{}()[\];,:!]|[ \t\n])");
+    std::regex tokenRegex(R"((\/\/[^\n]*\n)|("(\\.|[^"])*")|0x[0-9a-fA-F]+|[0-9]+|->|!=|==|<=|>=|&&|\|\||[a-zA-Z_][a-zA-Z0-9_]*|[-+*/%=<>{}()[\];,:!]|[ \t\n])");
     auto wordsBegin = std::sregex_iterator(code.begin(), code.end(), tokenRegex);
     auto wordsEnd = std::sregex_iterator();
 
@@ -190,6 +231,11 @@ int main() {
         if (token.type != T_Whitespace && token.type != T_Comment)
             std::cout << tokenTypeToString(token.type) << ": " << token.value << '\n';
     }
+
+    // فرض کنیم ast از parser ساخته شده
+    std::shared_ptr<ASTNode> ast = std::make_shared<ASTNode>();
+    SemanticAnalyzer analyzer;
+    analyzer.analyze(ast);
 
     return 0;
 }

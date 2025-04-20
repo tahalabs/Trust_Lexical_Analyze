@@ -1,13 +1,17 @@
-// این یک برنامه تست برای زبان Trust است
-
 fn main() {
-    let x: i32 = 5;
-    let y: i32 = 0x1A;
-    let result: i32 = x + y;
+    let x = 10; // متغیر صحیح
+    let y = 5;
 
-    if result > 10 {
-        println!("Result is greater than 10");
+    if x > y {
+        println!("x بزرگتر از y است!");
     } else {
-        println!("Result is 10 or less");
+        println!("y بزرگتر از x است!");
     }
+
+    let sum = add(x, y); // فراخوانی تابع
+    println!("مجموع x و y برابر با {}", sum);
+}
+
+fn add(a: i32, b: i32) -> i32 {
+    return a + b; // جمع دو عدد
 }
